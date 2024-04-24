@@ -1,0 +1,70 @@
+name: Spyne Workflow
+
+on:
+  push:
+    branches:
+      - container_init
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+
+      - name: Clone repository
+        run: git clone https://github.com/cdcgov/spyne.git
+
+      - name: Switch to container_init branch
+        run: git checkout container_init
+
+      - name: Pull IRMA image
+        run: docker pull public.ecr.aws/n3z8t4o2/irma:1.0.2p3
+
+      - name: Pull Dias-Ribosome image
+        run: docker pull public.ecr.aws/n3z8t4o2/dais-ribosome:1.2.1
+
+  run_spyne:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Start IRMA container
+        run: docker run -v /path/to/data:/data --name irma:1.0.2p3 -t -d public.ecr.aws/n3z8t4o2/irma:1.0.2p3
+
+      - name: Start Dias-Ribosome container
+        run: docker run -v /path/to/data:/data --name dais-ribosome:1.2.1 -t -d public.ecr.aws/n3z8t4o2/dais-ribosome:1.2.1
+
+      - name: Build spyne image
+        run: docker build -t spyne-dev:v1.0.0 --build-arg BUILD_STAGE=dev .
+
+      - name: Run spyne container
+        run: |
+          docker run -v /path/to/data:/data -v /path/to/spyne:/spyne -v /var/run/docker.sock:/var/run/docker.sock --name spyne-dev-1.0.0 -t -d spyne-dev:v1.0.0
+
+  execute_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Execute Snakemake pipeline
+        run: |
+          docker exec -w /data spyne-dev-1.0.0 bash snake-kickoff <path/to/samplesheet.csv> <runpath> <experiment_type>
+
+      - name: Execute IRMA pipeline
+        run: |
+          # For paired-end
+          docker exec -w /data irma-1.0.2p3 IRMA <MODULE|MODULE-CONFIG> <R1.fastq.gz|R1.fastq> <R2.fastq.gz|R2.fastq> [path/to/]<sample_name>
+          
+          # For single-end
+          docker exec -w /data irma-1.0.2p3 IRMA <MODULE|MODULE-CONFIG> <fastq|fastq.gz> [path/to/]<sample_name>
