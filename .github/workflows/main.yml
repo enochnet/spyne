@@ -13,13 +13,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
+      #- name: Install Docker
+       # run: |
+        #  sudo apt-get update
+         # sudo apt-get install -y docker.io
 
       - name: Clone repository
-        run: git clone https://github.com/cdcgov/spyne.git
+        run: git clone https://github.com/enochnet/spyne
 
       #- name: Switch to container_init branch
         #run: git checkout container_init
